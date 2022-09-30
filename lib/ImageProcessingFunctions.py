@@ -8,6 +8,7 @@ from lib import *
 import shutil
 import datetime
 from datetime import datetime
+from lib import FishDetection as fd
 
 
 def parse_metadata(video_file):
@@ -40,7 +41,7 @@ def extract_frames(video_file, frame_every_x_second):
     metadata = parse_metadata(video_file)
 
     parts = int(float(metadata['duration']) / frame_every_x_second)
-    intervals = int((float(metadata['duration'])*1000 // parts))
+    intervals = int((float(metadata['duration']) * 1000 // parts))
     interval_list = [(i * intervals, (i + 1) * intervals) for i in range(parts)]
     i = 0
 
@@ -57,7 +58,7 @@ def extract_frames(video_file, frame_every_x_second):
         print('Writing: ', os.path.join(output_directory, '{}_{:08d}.jpg'.format(base_name, item[1])), '...')
         (
             ffmpeg
-            .input(video_file, ss=float(item[1])/1000)
+            .input(video_file, ss=float(item[1]) / 1000)
             .filter('scale', int(metadata['width']), -1)
             .output(os.path.join(output_directory, '{}_{:08d}.jpg'.format(base_name, item[1])), vframes=1,
                     loglevel="quiet")
@@ -104,8 +105,22 @@ def cut_video(path_input, path_output, s_start, s_end):
 
 
 def merge_videos(output_file, path_to_merge_list):
-
     subprocess.run(
         'ffmpeg -loglevel error -f concat -safe 0 -i ' + path_to_merge_list + ' -c:v libx264 -c:a aac -preset '
                                                                               'ultrafast ' + output_file,
         shell=True)
+
+
+def cut_video_pairs(params, camera_pair, video_chapter, t_start, t_end, input_path, output_path):
+    all_intervals = [None] * params.number_of_videos[0]
+
+    for k in range(params.number_of_videos[0]):
+        all_intervals[k] = np.concatenate([[float(t_start)], [float(t_end)]], axis=0).reshape(2, 1)
+        all_intervals[k].astype(float)
+
+    camera = (camera_pair - 1) * 2
+
+    fish_detection = fd.FishDetection(
+        input_path + '/' + params.camera_names[camera] + '/' + params.video_names[camera][video_chapter])
+    fish_detection.trimmed_clips_output_path = output_path
+    fish_detection.get_video_pairs_for_detected_interval(all_intervals, params, camera, video_chapter)

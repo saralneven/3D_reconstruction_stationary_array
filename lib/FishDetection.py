@@ -102,7 +102,6 @@ def compute_interval_where_fish_x_is_present(params, fish_type):
 
     kernel_size = 4
     fish_present = sp.signal.convolve(results[fish_type, :], np.ones(kernel_size), mode='same') / kernel_size > 0.7
-    print(fish_present)
 
     fish_enters = np.where(np.diff(fish_present * 1) == 1)
     t1 = (fish_enters[fish_type]) * params.time_interval_between_frames
@@ -137,13 +136,12 @@ def trim_video_pairs(params, all_intervals, deployment, camera, video_number):
     all_intervals[video_number][:, :] = all_intervals[video_number][:, :] + deployment.lag_out_cal[camera]
     all_intervals_second_camera[video_number][:, :] = all_intervals_second_camera[video_number][:, :] + deployment.lag_out_cal[
         camera + 1]
-    print(all_intervals)
-    print(all_intervals_second_camera)
+
     for idx in range(len(all_intervals[video_number][0, :])):
         path_in = deployment.path_in + '/' + deployment.camera_names[camera] + '/' + deployment.video_names[camera][
             video_number]
         split_name = path_in.split('/')
-        print(split_name)
+
         path_out = params.trimmed_clips_output_path + split_name[-4] + '_' + split_name[-3] + '_' + \
                    split_name[-2] + '_' + params.base_name + '_' + str(idx + 1) + '_cam1.mp4'
 
