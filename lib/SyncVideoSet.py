@@ -16,13 +16,15 @@ from lib import FishDetection
 
 
 class SyncVideoSet:
-    def __init__(self, path_in, path_out='', recut_videos=False):
+    def __init__(self, path_in, path_out='', recut_videos=False, single_video_mode=False):
         print('---------- INITIALIZE SYNCHRONIZATION ----------')
         print('Start synchronizing video set found in', path_in)
 
         self.recut_videos = recut_videos
         self.path_in = path_in
         self.path_out = path_out
+
+        self.single_video_mode = single_video_mode
 
         # Get the camera and video names from the sub-folders
         print('Read video folders...')
@@ -100,15 +102,18 @@ class SyncVideoSet:
             self.lag_matrix = np.load(output_file_lag_matrix)
             print('Video set is already analysed and this data is loaded from', output_file_lag_matrix)
         else:
+            print('hier')
             get_time_lag_matrix(self, method, number_of_videos_to_evaluate)
 
             with open(output_file_lag_matrix, 'wb'):
                 np.save(output_file_lag_matrix, self.lag_matrix)
 
         # Determine final lag values
+
         lag_out, lag_out_cal = get_lag_vector_from_matrix(self)
         lag_out = lag_out / self.fps
         lag_out_cal = lag_out_cal / self.fps
+
 
         self.lag_out_cal = lag_out_cal
         self.lag_out = lag_out
@@ -134,11 +139,16 @@ class SyncVideoSet:
 
 
 def get_video_base_code(self):
+    if self.single_video_mode:
+        find_base_code = "GH01"
+    else:
+        find_base_code = "GH02"
+
     for i in range(self.number_of_cameras):
-        base_code_video = [s for s in self.video_names[i] if ("GH02" in s and ".MP4" in s and "._G" not in s)]
+        base_code_video = [s for s in self.video_names[i] if (find_base_code in s and ".MP4" in s and "._G" not in s)]
 
         if not base_code_video:
-            base_code_video = [s for s in self.video_names[i] if ("GX02" in s and ".MP4" in s and "._G" not in s)]
+            base_code_video = [s for s in self.video_names[i] if (find_base_code.replace('H','X') in s and ".MP4" in s and "._G" not in s)]
 
         self.base_code[i] = base_code_video[0][4:8]
 
@@ -214,7 +224,7 @@ def verify_input_data(self):
         print('Fps: ' + str(np.round(self.fps)))
         print('Resolution: ' + str(self.width) + ' X ' + str(self.height))
 
-    if np.min(self.number_of_videos) < 2:
+    if np.min(self.number_of_videos) < 1:
         print('One of the cameras has ', str(np.min(self.number_of_videos)), 'video(s). At least 2 are needed. Verify '
                                                                              'if the correct folder is addressed')
         self.flag_folder_input = False
@@ -257,16 +267,20 @@ def get_lag_vector_from_matrix(params):
 
     lag_out = np.zeros(params.number_of_cameras)
 
-    for i in range(1, params.number_of_cameras):
-        if i % 2 == 1:
-            values, counts = np.unique(
-                np.concatenate([lag_matrix_frames[:, i], np.squeeze(lag_matrix_frames[rows, i])]),
-                return_counts=True)
-        else:
-            values, counts = np.unique(lag_matrix_frames[:, i], return_counts=True)
-        lag_out[i] = values[np.argmax(counts)]
-
-    lag_out = lag_out
+    if not params.single_video_mode:
+        for i in range(1, params.number_of_cameras):
+            print(i)
+            if i % 2 == 1:
+                print(lag_matrix_frames)
+                print(rows)
+                values, counts = np.unique(
+                    np.concatenate([lag_matrix_frames[:, i], np.squeeze(lag_matrix_frames[rows, i])]),
+                    return_counts=True)
+            else:
+                values, counts = np.unique(lag_matrix_frames[:, i], return_counts=True)
+            lag_out[i] = values[np.argmax(counts)]
+    else:
+        lag_out = lag_matrix_frames[0, :]
 
     lag_out_all = lag_out - np.min(lag_out)
 
@@ -344,6 +358,9 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
     else:
         print('ERROR: no correct method is assigned. Use either ''maximum'' or ''custom''')
         sys.exit()
+
+    if params.single_video_mode:
+        itr_max = 1
 
     out = np.zeros((params.number_of_cameras * itr_max, params.number_of_cameras))
 

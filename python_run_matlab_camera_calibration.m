@@ -9,7 +9,7 @@ tic
 v = VideoReader(video_paths{1});
 options.squareSizeInMM = 27*2;
 options.imagesize=[v.Height,v.Width];
-options.n_framesout = 100; % target number of calibration frames per camera
+options.n_framesout = 300; % target number of calibration frames per camera
 options.NumRadialDistortionCoefficients = 3;
 
 % find images with checkerboards
@@ -24,7 +24,6 @@ disp('Wrinting images...')
 disp('Computing camera parameters...')
 cam_parms = get_cam_parms(cam_images,options);
 
-(cam_parms)
 
 % calibrate stereo cameras
 disp('Computing stereo parameters...')

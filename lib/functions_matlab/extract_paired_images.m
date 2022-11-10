@@ -22,4 +22,8 @@ DirList = dir(fullfile("images/calib_images/1", '*.jpg'));
 cam1_images = fullfile("images/calib_images/1", {DirList.name});
 DirList = dir(fullfile("images/calib_images/2", '*.jpg'));
 cam2_images = fullfile("images/calib_images/2", {DirList.name});
+
+size(cam1_images)
+size(cam2_images)
+
 cam_images=[cam1_images;cam2_images];
