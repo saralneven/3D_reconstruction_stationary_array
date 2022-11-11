@@ -8,9 +8,6 @@ input_path = '/Volumes/2022_copy/Test_calib/1'
 # Create a synchronization object containing the deployment's properties
 deployment = SyncVideoSet(input_path, recut_videos=True, single_video_mode=True)
 
-# Set path to matlab
-deployment.path_to_matlab = '/Applications/MATLAB_R2022a.app/bin/matlab'
-
 # Determine time lag between videos
 deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=1)
 
@@ -18,8 +15,6 @@ deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=1)
 deployment.get_calibration_videos()
 
 # Determine 3D camera matrices
-deployment = SyncVideoSet(input_path, recut_videos=False, single_video_mode=True)
-deployment.get_calibration_videos()
 deployment.compute_3d_matrices()
 
 '''

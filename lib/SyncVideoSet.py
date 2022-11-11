@@ -1,18 +1,13 @@
-import os
 import subprocess
 import json
 import os
 import sys
 from scipy.io import wavfile
-from joblib import Parallel, delayed
-from scipy.signal import fftconvolve
 import time
-import shutil
-import moviepy.editor as movp
 import numpy as np
 from scipy.signal import fftconvolve
 from lib import ImageProcessingFunctions as ip
-from lib import FishDetection
+
 
 
 class SyncVideoSet:
@@ -102,18 +97,15 @@ class SyncVideoSet:
             self.lag_matrix = np.load(output_file_lag_matrix)
             print('Video set is already analysed and this data is loaded from', output_file_lag_matrix)
         else:
-            print('hier')
             get_time_lag_matrix(self, method, number_of_videos_to_evaluate)
 
             with open(output_file_lag_matrix, 'wb'):
                 np.save(output_file_lag_matrix, self.lag_matrix)
 
         # Determine final lag values
-
         lag_out, lag_out_cal = get_lag_vector_from_matrix(self)
         lag_out = lag_out / self.fps
         lag_out_cal = lag_out_cal / self.fps
-
 
         self.lag_out_cal = lag_out_cal
         self.lag_out = lag_out
@@ -131,7 +123,7 @@ class SyncVideoSet:
     def get_calibration_videos(self):
         if self.recut_videos:
             get_trimmed_videos(self, True)
-
+        print('start')
         clean_video_names(self)
 
     def compute_3d_matrices(self):
@@ -148,7 +140,8 @@ def get_video_base_code(self):
         base_code_video = [s for s in self.video_names[i] if (find_base_code in s and ".MP4" in s and "._G" not in s)]
 
         if not base_code_video:
-            base_code_video = [s for s in self.video_names[i] if (find_base_code.replace('H','X') in s and ".MP4" in s and "._G" not in s)]
+            base_code_video = [s for s in self.video_names[i] if
+                               (find_base_code.replace('H', 'X') in s and ".MP4" in s and "._G" not in s)]
 
         self.base_code[i] = base_code_video[0][4:8]
 
@@ -402,6 +395,10 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
 
 
 def clean_video_names(params):
+
+    for idx in range(params.number_of_cameras):
+        params.video_names[idx] = np.sort(os.listdir(params.path_in + '/' + params.camera_names[idx]))
+
     for i in range(params.number_of_cameras):
         temp = params.video_names[i][:]
         j = 0
@@ -414,6 +411,7 @@ def clean_video_names(params):
             j += 1
         params.video_names[i] = np.sort(temp)
         params.number_of_videos[i] = j
+    return params
 
 
 def compute_3d_matrices_matlab(params):
@@ -433,5 +431,3 @@ def compute_3d_matrices_matlab(params):
         os.system(
             params.path_to_matlab + ' -nodesktop -nosplash -r "python_run_matlab_camera_calibration(\'' + name1 +
             '\',\'' + name2 + '\',\'' + save_folder + '\')"')
-
-
