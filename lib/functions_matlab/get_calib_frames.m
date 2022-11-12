@@ -1,6 +1,6 @@
 function cal_frames = get_calib_frames(video_paths,options)
 v = VideoReader(video_paths{1});
-f_interval=300;
+f_interval=30;
 calibframes = [];
 for i = 1:f_interval:v.NumFrames
     frame = read(v,[i i]);

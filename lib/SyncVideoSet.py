@@ -7,7 +7,7 @@ import time
 import numpy as np
 from scipy.signal import fftconvolve
 from lib import ImageProcessingFunctions as ip
-
+import shutil
 
 
 class SyncVideoSet:
@@ -123,11 +123,15 @@ class SyncVideoSet:
     def get_calibration_videos(self):
         if self.recut_videos:
             get_trimmed_videos(self, True)
-        print('start')
         clean_video_names(self)
 
-    def compute_3d_matrices(self):
-        compute_3d_matrices_matlab(self)
+    def compute_3d_matrices(self, square_size_mm='40', save_folder='results/calib_results'):
+        if self.single_video_mode:
+            compute_3d_matrices_matlab_single_video(self, square_size_mm, save_folder)
+        else:
+            compute_3d_matrices_matlab(self)
+    def generate_images_from_calibration_video(self, frames_per_x_sec):
+        generate_calibration_images(self, frames_per_x_sec)
 
 
 def get_video_base_code(self):
@@ -395,10 +399,11 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
 
 
 def clean_video_names(params):
-
+    # Re-index video names
     for idx in range(params.number_of_cameras):
         params.video_names[idx] = np.sort(os.listdir(params.path_in + '/' + params.camera_names[idx]))
 
+    # Index calibration videos and remove names from original video list
     for i in range(params.number_of_cameras):
         temp = params.video_names[i][:]
         j = 0
@@ -431,3 +436,39 @@ def compute_3d_matrices_matlab(params):
         os.system(
             params.path_to_matlab + ' -nodesktop -nosplash -r "python_run_matlab_camera_calibration(\'' + name1 +
             '\',\'' + name2 + '\',\'' + save_folder + '\')"')
+
+
+def generate_calibration_images(params, frames_per_x_sec):
+    name1 = os.path.join(params.path_in, params.camera_names[0], params.calibration_video_names[0])
+    name2 = os.path.join(params.path_in, params.camera_names[1], params.calibration_video_names[1])
+
+    print(name1)
+    folder = 'images/calib_images'
+
+    # C lean folders
+    for filename in os.listdir(folder):
+        file_path = os.path.join(folder, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+    ip.extract_frames(name1, frames_per_x_sec, folder=folder)
+    ip.extract_frames(name2, frames_per_x_sec, folder=folder)
+
+
+def compute_3d_matrices_matlab_single_video(params, squareSizeMM, save_folder):
+    base_name = os.path.splitext(os.path.basename(params.calibration_video_names[0]))[0]
+    output_directory1 = os.path.join('images/calib_images', base_name)
+
+    base_name = os.path.splitext(os.path.basename(params.calibration_video_names[0]))[0]
+    output_directory2 = os.path.join('images/calib_images', base_name)
+
+    os.system(
+        params.path_to_matlab + ' -nodesktop -nosplash -r "python_run_code_calib_videos(\'' + output_directory1 +
+        '\',\'' + output_directory2 + '\',\'' + str(params.height) + '\',\'' + str(
+            params.width) + '\',\'' + squareSizeMM +
+        '\',\'' + save_folder + '\')"')

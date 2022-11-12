@@ -1,16 +1,30 @@
+import cv2
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
+import os, shutil
+from lib import ImageProcessingFunctions as ip
 
-'''import numpy as np
-np.load('results/names_all_deployments_bommie.npy')'''
+frames_per_x_sec = 1
 
-import os
+name1 = '/Volumes/2022_copy/Test_calib/1/A/GH010004_cut_cal.mp4'
+name2 = '/Volumes/2022_copy/Test_calib/1/B/GH010003_cut_cal.mp4'
 
-name1 = '/Volumes/2022_copy/predator/14_07_22/3/H/GH017477_cut_cal.mp4'
-name2 = '/Volumes/2022_copy/predator/14_07_22/3/I/GH016449_cut_cal.mp4'
+folder = 'images/calib_images'
 
-save_folder = 'results/calib_results/predator_14_07_22_3_HI'
+for filename in os.listdir(folder):
+    file_path = os.path.join(folder, filename)
+    try:
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+    except Exception as e:
+        print('Failed to delete %s. Reason: %s' % (file_path, e))
 
-if not os.path.exists(save_folder):
-    os.makedirs(save_folder)
+ip.extract_frames(name1, frames_per_x_sec, folder=folder)
+ip.extract_frames(name2, frames_per_x_sec, folder=folder)
 
-os.system('/Applications/MATLAB_R2022a.app/bin/matlab -nodesktop -nosplash -r "python_run_matlab_camera_calibration(\''
-          + name1 + '\',\'' + name2 + '\',\'' + save_folder + '\')"')
+img1_path = 'images/calib_images/GH010003_cut_cal/GH010003_cut_cal_0000100.jpg'
+img2_path = 'images/calib_images/GH010004_cut_cal/GH010004_cut_cal_0000100.jpg'
+

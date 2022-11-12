@@ -35,18 +35,18 @@ def parse_metadata(video_file):
             'height': height}
 
 
-def extract_frames(video_file, frame_every_x_second):
+def extract_frames(video_file, frame_every_x_second, folder='images/detection_images'):
     # writes output as milliseconds in name _########. Maximum timestamp corresponds to
 
     metadata = parse_metadata(video_file)
 
     parts = int(float(metadata['duration']) / frame_every_x_second)
-    intervals = int((float(metadata['duration']) * 1000 // parts))
+    intervals = int((float(metadata['duration']) * 100 // parts))
     interval_list = [(i * intervals, (i + 1) * intervals) for i in range(parts)]
     i = 0
 
     base_name = os.path.splitext(os.path.basename(video_file))[0]
-    output_directory = os.path.join('images/detection_images', base_name)
+    output_directory = os.path.join(folder, base_name)
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory, exist_ok=True)
@@ -58,7 +58,7 @@ def extract_frames(video_file, frame_every_x_second):
         print('Writing: ', os.path.join(output_directory, '{}_{:08d}.jpg'.format(base_name, item[1])), '...')
         (
             ffmpeg
-            .input(video_file, ss=float(item[1]) / 1000)
+            .input(video_file, ss=float(item[1]) / 100)
             .filter('scale', int(metadata['width']), -1)
             .output(os.path.join(output_directory, '{}_{:08d}.jpg'.format(base_name, item[1])), vframes=1,
                     loglevel="quiet")
