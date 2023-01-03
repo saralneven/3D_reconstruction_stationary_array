@@ -2,6 +2,7 @@ import subprocess
 import json
 import os
 import sys
+import cv2
 from scipy.io import wavfile
 import time
 import numpy as np
@@ -11,9 +12,11 @@ import shutil
 
 
 class SyncVideoSet:
-    def __init__(self, path_in, path_out='', recut_videos=False, single_video_mode=False):
+    def __init__(self, path_in, path_out='', recut_videos=False, single_video_mode=False, calibration_video_mode=1):
         print('---------- INITIALIZE SYNCHRONIZATION ----------')
         print('Start synchronizing video set found in', path_in)
+
+        self.calibration_video_mode = calibration_video_mode
 
         self.recut_videos = recut_videos
         self.path_in = path_in
@@ -85,6 +88,7 @@ class SyncVideoSet:
 
         # 3D reconstruction preset
         self.path_to_matlab = '/Applications/MATLAB_R2022a.app/bin/matlab'
+        self.calib_interval = []
 
     def get_time_lag(self, method='maximum', number_of_videos_to_evaluate=4):
         print('---------- FIND TIME LAG BETWEEN VIDEOS ----------')
@@ -125,11 +129,18 @@ class SyncVideoSet:
             get_trimmed_videos(self, True)
         clean_video_names(self)
 
+    def detect_calibration_videos(self):
+        detect_calibration_videos(self)
+
     def compute_3d_matrices(self, square_size_mm='40', save_folder='results/calib_results'):
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+
         if self.single_video_mode:
             compute_3d_matrices_matlab_single_video(self, square_size_mm, save_folder)
         else:
             compute_3d_matrices_matlab(self)
+
     def generate_images_from_calibration_video(self, frames_per_x_sec):
         generate_calibration_images(self, frames_per_x_sec)
 
@@ -138,7 +149,7 @@ def get_video_base_code(self):
     if self.single_video_mode:
         find_base_code = "GH01"
     else:
-        find_base_code = "GH02"
+        find_base_code = "GH03"
 
     for i in range(self.number_of_cameras):
         base_code_video = [s for s in self.video_names[i] if (find_base_code in s and ".MP4" in s and "._G" not in s)]
@@ -155,14 +166,12 @@ def get_video_base_code(self):
 def remove_additional_videos(params, remove_cut_files):
     for i in range(params.number_of_cameras):
         if remove_cut_files:
-            files_to_delete = [s for s in params.video_names[i][:] if (params.base_code[i] not in s
-                                                                       or not (".MP4" in s or ".mp4" in s)
+            files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
                                                                        or "._GH" in s
                                                                        or "._GX" in s
                                                                        or "_cut" in s)]
         else:
-            files_to_delete = [s for s in params.video_names[i][:] if (params.base_code[i] not in s
-                                                                       or not (".MP4" in s or ".mp4" in s)
+            files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
                                                                        or "._GH" in s
                                                                        or "._GX" in s)]
 
@@ -186,7 +195,7 @@ def remove_additional_videos(params, remove_cut_files):
 
 def load_meta_data(self):
     for idx in range(self.number_of_cameras):
-        video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][0]
+        video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][2]
 
         temp_file = os.path.splitext(video_file)[0] + '.json'
 
@@ -442,10 +451,9 @@ def generate_calibration_images(params, frames_per_x_sec):
     name1 = os.path.join(params.path_in, params.camera_names[0], params.calibration_video_names[0])
     name2 = os.path.join(params.path_in, params.camera_names[1], params.calibration_video_names[1])
 
-    print(name1)
     folder = 'images/calib_images'
 
-    # C lean folders
+    # Clean folders
     for filename in os.listdir(folder):
         file_path = os.path.join(folder, filename)
         try:
@@ -472,3 +480,51 @@ def compute_3d_matrices_matlab_single_video(params, squareSizeMM, save_folder):
         '\',\'' + output_directory2 + '\',\'' + str(params.height) + '\',\'' + str(
             params.width) + '\',\'' + squareSizeMM +
         '\',\'' + save_folder + '\')"')
+
+
+def detect_calibration_videos(deployment):
+    for i in range(deployment.number_of_cameras):
+        files = deployment.video_names[i][:]
+        base_codes = []
+
+        potential_calib_videos = []
+        for name in files:
+            if ('.mp4' or '.MP4' in name) and (name[4:8] < deployment.base_code[i]):
+                path = os.path.join(deployment.path_in, deployment.camera_names[i], name)
+                temp_file = os.path.splitext(name)[0] + '.json'
+                subprocess.run(
+                    'ffprobe -v quiet -print_format json -show_format -show_streams {} > {}'.format(path, temp_file),
+                    shell=True)
+
+                metadata = json.load(open(temp_file, 'r'))
+                os.remove(temp_file)
+
+                duration = float((metadata['streams'][1]['duration']))
+
+                if duration > 60:
+                    potential_calib_videos.append(name)
+
+        delta_t = 4
+
+        for j in range(len(potential_calib_videos)):
+            path_in = os.path.join(deployment.path_in, deployment.camera_names[i], potential_calib_videos[j])
+            img_folder = ip.extract_frames(path_in, delta_t, folder='images/temp_detect_calib_video')
+
+            rows = 8  # number of checkerboard rows.
+            columns = 11  # number of checkerboard columns.
+
+            img_dir_list = os.listdir(img_folder)
+            t_detect = []
+            t = 0
+
+            for img_name in img_dir_list:
+                img = cv2.imread(os.path.join(img_folder, img_name), 0)
+                ret, corners = cv2.findChessboardCorners(img, (rows, columns), None)
+                if ret:
+                    t_detect.append(t)
+                t += delta_t
+
+            if len(t_detect) > 1:
+                interval_calib_video = [min(t_detect) - delta_t, max(t_detect) + delta_t]
+                deployment.calibration_video_names[i] = potential_calib_videos[j]
+                deployment.calib_interval.append(interval_calib_video)

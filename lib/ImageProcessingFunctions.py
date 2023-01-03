@@ -41,7 +41,7 @@ def extract_frames(video_file, frame_every_x_second, folder='images/detection_im
     metadata = parse_metadata(video_file)
 
     parts = int(float(metadata['duration']) / frame_every_x_second)
-    intervals = int((float(metadata['duration']) * 100 // parts))
+    intervals = int((float(metadata['duration']) * 10 // parts))
     interval_list = [(i * intervals, (i + 1) * intervals) for i in range(parts)]
     i = 0
 
@@ -55,17 +55,17 @@ def extract_frames(video_file, frame_every_x_second, folder='images/detection_im
         os.makedirs(output_directory, exist_ok=True)
 
     for item in interval_list:
-        print('Writing: ', os.path.join(output_directory, '{}_{:08d}.jpg'.format(base_name, item[1])), '...')
+        print('Writing: ', os.path.join(output_directory, '{}_{:08d}.png'.format(base_name, item[1])), '...')
         (
             ffmpeg
-            .input(video_file, ss=float(item[1]) / 100)
+            .input(video_file, ss=float(item[1]) / 10)
             .filter('scale', int(metadata['width']), -1)
-            .output(os.path.join(output_directory, '{}_{:08d}.jpg'.format(base_name, item[1])), vframes=1,
+            .output(os.path.join(output_directory, '{}_{:08d}.png'.format(base_name, item[1])), vframes=1,
                     loglevel="quiet")
             .run()
         )
         i += 1
-    return True
+    return output_directory
 
 
 def get_base_name(path):

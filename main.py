@@ -3,11 +3,18 @@ from lib import SyncVideoSet
 from lib import ImageProcessingFunctions as ip
 
 # Path to deployment folder
-input_path = '/Volumes/2022_copy/Test_calib/1'
+input_path = '/Volumes/2022_copy/predator/19_07_22/2'
 
 # Create a synchronization object containing the deployment's properties
 deployment = SyncVideoSet(input_path, recut_videos=True, single_video_mode=True)
 
+# Path to deployment folder
+input_path = '/Volumes/2022_copy/predator/14_07_22/3'
+
+# Create a synchronization object containing the deployment's properties
+deployment = SyncVideoSet(input_path, recut_videos=True, single_video_mode=True)
+
+'''
 # Set path to matlab
 deployment.path_to_matlab = '/Applications/MATLAB_R2022a.app/bin/matlab'
 
@@ -20,7 +27,7 @@ deployment.get_calibration_videos()
 # Determine 3D camera matrices
 deployment = SyncVideoSet(input_path, recut_videos=False, single_video_mode=True)
 deployment.get_calibration_videos()
-deployment.compute_3d_matrices()
+deployment.compute_3d_matrices()'''
 
 '''
 camera_pair = 1    # 1=[A,B] 2=[C,D] etc. Alphabetic order of the cameras is assumed throughout the scripts

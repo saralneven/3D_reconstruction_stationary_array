@@ -30,6 +30,8 @@ save([save_folder, '/rotationOfCamera2.mat'], 'rotationOfCamera2')
 save([save_folder, '/translationOfCamera2.mat'], 'translationOfCamera2')
 save([save_folder, '/distortionCoefficients1.mat'], 'distortionCoefficients1')
 save([save_folder, '/distortionCoefficients2.mat'], 'distortionCoefficients2')
+save([save_folder, '/imagepoints.mat'], 'imagepoints')
 save([save_folder, '/stereoParams.mat'], 'stereoParams')
 
+exit
 end
