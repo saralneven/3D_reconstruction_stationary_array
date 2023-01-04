@@ -211,7 +211,8 @@ def remove_additional_videos(params, remove_cut_files):
                                                                            or "._GX" in s
                                                                            or "_cut" in s)]
             else:
-                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+                files_to_delete = [s for s in params.video_names[i][:] if (params.base_code[i] not in s
+                                                                           or not (".MP4" in s or ".mp4" in s)
                                                                            or "._GH" in s
                                                                            or "._GX" in s
                                                                            or "_cut" in s)]
@@ -221,7 +222,8 @@ def remove_additional_videos(params, remove_cut_files):
                                                                            or "._GH" in s
                                                                            or "._GX" in s)]
             else:
-                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+                files_to_delete = [s for s in params.video_names[i][:] if (params.base_code[i] not in s
+                                                                           or not (".MP4" in s or ".mp4" in s)
                                                                            or "._GH" in s
                                                                            or "._GX" in s)]
         for file_name in files_to_delete:
@@ -590,5 +592,3 @@ def detect_calibration_videos(deployment):
                 interval_calib_video = [max(0, min(t_detect) - delta_t), max(t_detect) + delta_t]
                 deployment.calibration_video_names[i] = potential_calib_videos[j]
                 deployment.calib_interval.append(interval_calib_video)
-
-
