@@ -8,7 +8,7 @@ save_folder = 'results/calib_results/test'
 squareSizeMM = '30'
 
 # Path to deployment folder
-for i in range(2,8):
+for i in range(2, 8):
     print(i)
     input_path = '/Volumes/2022_copy/Swimmingpool/'+str(i+1)
     save_folder = 'results/calib_results/Swimmingpool/'+str(i+1)

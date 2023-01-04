@@ -1,5 +1,4 @@
 import os.path
-
 from lib import SyncVideoSet
 import time
 import pickle
@@ -14,8 +13,6 @@ deployment.get_time_lag()
 
 deployment.save()
 print(time.time()-t0)
-
-
 
 
 '''
