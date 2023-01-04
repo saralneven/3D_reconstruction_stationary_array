@@ -205,15 +205,25 @@ def get_video_base_code(self):
 def remove_additional_videos(params, remove_cut_files):
     for i in range(params.number_of_cameras):
         if remove_cut_files:
-            files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
-                                                                       or "._GH" in s
-                                                                       or "._GX" in s
-                                                                       or "_cut" in s)]
+            if params.calibration_video_mode == 1:
+                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+                                                                           or "._GH" in s
+                                                                           or "._GX" in s
+                                                                           or "_cut" in s)]
+            else:
+                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+                                                                           or "._GH" in s
+                                                                           or "._GX" in s
+                                                                           or "_cut" in s)]
         else:
-            files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
-                                                                       or "._GH" in s
-                                                                       or "._GX" in s)]
-
+            if params.calibration_video_mode == 1:
+                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+                                                                           or "._GH" in s
+                                                                           or "._GX" in s)]
+            else:
+                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+                                                                           or "._GH" in s
+                                                                           or "._GX" in s)]
         for file_name in files_to_delete:
 
             if os.path.exists(params.path_in + str('/') + params.camera_names[i] + str('/') + file_name):

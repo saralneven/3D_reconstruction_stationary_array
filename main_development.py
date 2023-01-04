@@ -9,7 +9,7 @@ deployment = SyncVideoSet('/Volumes/Disk_B/Predator/26_11_2022/6', recut_videos=
 
 deployment.detect_calibration_videos()
 
-deployment.get_time_lag()
+deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=4)
 
 deployment.save()
 print(time.time()-t0)
