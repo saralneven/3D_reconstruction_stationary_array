@@ -9,13 +9,24 @@ import numpy as np
 from scipy.signal import fftconvolve
 from lib import ImageProcessingFunctions as ip
 import shutil
+import pickle
+import datetime
 
 
 class SyncVideoSet:
-    def __init__(self, path_in, path_out='', recut_videos=False, single_video_mode=False, calibration_video_mode=1):
+    def __init__(self, path_in, path_out='', recut_videos=False, single_video_mode=False, calibration_video_mode=1,
+                 load_data=True):
         print('---------- INITIALIZE SYNCHRONIZATION ----------')
         print('Start synchronizing video set found in', path_in)
 
+        # output_name
+        temp = path_in.split('/')
+        output_name = temp[-3] + '_' + temp[-2] + '_' + temp[-1]
+        cd = os.getcwd()
+
+        self.filename = cd + '/results/deployments/' + output_name + '.pkl'
+
+        self.output_name = temp[-3] + '_' + temp[-2] + '_' + temp[-1]
         self.calibration_video_mode = calibration_video_mode
 
         self.recut_videos = recut_videos
@@ -88,7 +99,12 @@ class SyncVideoSet:
 
         # 3D reconstruction preset
         self.path_to_matlab = '/Applications/MATLAB_R2022a.app/bin/matlab'
+
+        # empty struct for calibration intervals
         self.calib_interval = []
+
+        if os.path.exists(self.filename) and load_data:
+            self.load()
 
     def get_time_lag(self, method='maximum', number_of_videos_to_evaluate=4):
         print('---------- FIND TIME LAG BETWEEN VIDEOS ----------')
@@ -130,7 +146,10 @@ class SyncVideoSet:
         clean_video_names(self)
 
     def detect_calibration_videos(self):
-        detect_calibration_videos(self)
+        if any(v is None for v in self.calibration_video_names):
+            detect_calibration_videos(self)
+        else:
+            print('Calibration data was loaded')
 
     def compute_3d_matrices(self, square_size_mm='40', save_folder='results/calib_results'):
         if not os.path.exists(save_folder):
@@ -143,6 +162,24 @@ class SyncVideoSet:
 
     def generate_images_from_calibration_video(self, frames_per_x_sec):
         generate_calibration_images(self, frames_per_x_sec)
+
+    def save_old(self):
+        path = fr'results/deployments/{self.output_name}.pkl'
+
+        with open(path, 'wb') as output:
+            pickle.dump(self, output, pickle.HIGHEST_PROTOCOL)
+
+    def load(self):
+        with open(self.filename, 'rb') as input:
+            temp = pickle.load(input)
+        self.calib_interval = temp.calib_interval
+        self.calibration_video_names = temp.calibration_video_names
+        return self
+
+    def save(self):
+        f = open(self.filename, 'wb')
+        pickle.dump(self, f, 2)
+        f.close()
 
 
 def get_video_base_code(self):
@@ -157,8 +194,10 @@ def get_video_base_code(self):
         if not base_code_video:
             base_code_video = [s for s in self.video_names[i] if
                                (find_base_code.replace('H', 'X') in s and ".MP4" in s and "._G" not in s)]
-
-        self.base_code[i] = base_code_video[0][4:8]
+        if base_code_video:
+            self.base_code[i] = base_code_video[0][4:8]
+        else:
+            self.base_code[i] = []
 
     return self
 
@@ -195,7 +234,7 @@ def remove_additional_videos(params, remove_cut_files):
 
 def load_meta_data(self):
     for idx in range(self.number_of_cameras):
-        video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][2]
+        video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][0]
 
         temp_file = os.path.splitext(video_file)[0] + '.json'
 
@@ -483,11 +522,22 @@ def compute_3d_matrices_matlab_single_video(params, squareSizeMM, save_folder):
 
 
 def detect_calibration_videos(deployment):
+    for filename in os.listdir('images/temp_detect_calib_video'):
+        file_path = os.path.join('images/temp_detect_calib_video', filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))
+
     for i in range(deployment.number_of_cameras):
         files = deployment.video_names[i][:]
-        base_codes = []
-
         potential_calib_videos = []
+        if not deployment.base_code[i]:
+            return
+
         for name in files:
             if ('.mp4' or '.MP4' in name) and (name[4:8] < deployment.base_code[i]):
                 path = os.path.join(deployment.path_in, deployment.camera_names[i], name)
@@ -524,7 +574,11 @@ def detect_calibration_videos(deployment):
                     t_detect.append(t)
                 t += delta_t
 
+                print('Searching for checkerboards image at time: ', str(datetime.timedelta(seconds=t)))
+
             if len(t_detect) > 1:
-                interval_calib_video = [min(t_detect) - delta_t, max(t_detect) + delta_t]
+                interval_calib_video = [max(0, min(t_detect) - delta_t), max(t_detect) + delta_t]
                 deployment.calibration_video_names[i] = potential_calib_videos[j]
                 deployment.calib_interval.append(interval_calib_video)
+
+

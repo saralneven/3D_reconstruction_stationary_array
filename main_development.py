@@ -1,16 +1,19 @@
-import pandas as pd
-import os
-import numpy as np
+import os.path
+
 from lib import SyncVideoSet
-from lib import ImageProcessingFunctions as ip
-from lib import StereoCalibrationFunctions as sc
-import subprocess
-import json
-import cv2
+import time
+import pickle
 
-deployment = SyncVideoSet('/Volumes/Disk_A/Predator/22_11_2022/3', recut_videos=True)
+t0 = time.time()
 
-deployment.ca
+deployment = SyncVideoSet('/Volumes/Disk_B/Predator/26_11_2022/6', recut_videos=True)
+
+deployment.detect_calibration_videos()
+
+deployment.get_time_lag()
+
+deployment.save()
+print(time.time()-t0)
 
 
 
