@@ -148,9 +148,13 @@ class SyncVideoSet:
         clean_video_names(self)
 
     def get_calibration_videos(self):
-        if self.recut_videos:
-            get_trimmed_videos(self, True)
-        clean_video_names(self)
+        if self.calibration_video_mode == 0:
+            if self.recut_videos:
+                get_trimmed_videos(self, True)
+            clean_video_names(self)
+        else:
+            print('mode 1')
+
 
     def detect_calibration_videos(self):
         if any(v is None for v in self.calibration_video_names):
@@ -184,6 +188,7 @@ class SyncVideoSet:
         self.lag_out = temp.lag_out
         self.lag_matrix = temp.lag_matrix
         self.lag_out_cal = temp.calibration_video_names
+        self.lag_matrix_calibration = temp.lag_matrix_calibration
         return self
 
     def save(self):

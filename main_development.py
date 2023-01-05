@@ -5,30 +5,18 @@ import pickle
 
 # calibration_video_mode = 0 --> If the calibration video is contained in the first video chapter of the main video
 # calibration_video_mode = 1 --> If the calibration video is contained in a single video
-path_in = '/Volumes/2022_copy/bommie/13_07_22/1'
-init_list = os.listdir(path_in)
-all_deployments = []
+path_in = '/Volumes/Disk_B/Predator/23_11_2022/3'
 
-for l in init_list:
-    subdir = os.listdir(os.path.join(path_in, l))
-    for k in subdir:
-        all_deployments.append(os.path.join(path_in, l, k))
+deployment = SyncVideoSet(path_in, recut_videos=True, calibration_video_mode=1)
 
-t0 = time.time()
+deployment.detect_calibration_videos()
 
-for name in all_deployments:
-    try:
-        deployment = SyncVideoSet(name, recut_videos=True, calibration_video_mode=1)
+deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=2)
 
-        deployment.detect_calibration_videos()
+deployment.get_calibration_videos()
 
-        deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=2)
+deployment.save()
 
-        deployment.save()
-    except:
-        print('Caught')
-
-print(time.time() - t0)
 
 '''
 idx_sheet = -1
