@@ -10,12 +10,5 @@ deployment = SyncVideoSet(path_in, recut_videos=False, calibration_video_mode=1)
 
 # Determine time lag between videos
 deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=4)
-
 deployment.save()
 
-'''# Get calibration videos
-deployment.get_calibration_videos()
-
-# Cut and merge single videos
-deployment.cut_and_merge_videos(merge=True)
-'''
