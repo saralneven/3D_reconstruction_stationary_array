@@ -100,8 +100,8 @@ def cut_video(path_input, path_output, s_start, s_end):
         os.remove(path_output)
     print('Cut from', t1, 'to', t2)
     subprocess.run(
-        'ffmpeg -loglevel error -ss ' + t1 + ' -to ' + t2 + ' -i ' + path_input + ' -c:v libx264 -c:a aac -preset ultrafast ' + path_output,
-        shell=True)
+        'ffmpeg -loglevel error -ss ' + t1 + ' -to ' + t2 + ' -i ' + path_input + ' -c:v libx264 -c:a aac -preset fast '
+        + path_output, shell=True)
 
 
 def merge_videos(output_file, path_to_merge_list):
