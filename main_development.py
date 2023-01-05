@@ -5,7 +5,7 @@ import pickle
 
 # calibration_video_mode = 0 --> If the calibration video is contained in the first video chapter of the main video
 # calibration_video_mode = 1 --> If the calibration video is contained in a single video
-path_in = '/Volumes/Disk_B/Predator/'
+path_in = '/Volumes/2022_copy/bommie/13_07_22/1'
 init_list = os.listdir(path_in)
 all_deployments = []
 

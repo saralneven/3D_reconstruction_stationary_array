@@ -217,27 +217,16 @@ def get_video_base_code(self):
 def remove_additional_videos(params, remove_cut_files):
     for i in range(params.number_of_cameras):
         if remove_cut_files:
-            if params.calibration_video_mode == 1:
-                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+            files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
                                                                            or "._GH" in s
                                                                            or "._GX" in s
                                                                            or "_cut" in s)]
-            else:
-                files_to_delete = [s for s in params.video_names[i][:] if (params.base_code[i] not in s
-                                                                           or not (".MP4" in s or ".mp4" in s)
-                                                                           or "._GH" in s
-                                                                           or "._GX" in s
-                                                                           or "_cut" in s)]
+
         else:
-            if params.calibration_video_mode == 1:
-                files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
+            files_to_delete = [s for s in params.video_names[i][:] if (not (".MP4" in s or ".mp4" in s)
                                                                            or "._GH" in s
                                                                            or "._GX" in s)]
-            else:
-                files_to_delete = [s for s in params.video_names[i][:] if (params.base_code[i] not in s
-                                                                           or not (".MP4" in s or ".mp4" in s)
-                                                                           or "._GH" in s
-                                                                           or "._GX" in s)]
+
         for file_name in files_to_delete:
 
             if os.path.exists(params.path_in + str('/') + params.camera_names[i] + str('/') + file_name):
@@ -261,7 +250,8 @@ def load_meta_data(self):
         if self.calibration_video_mode == 0:
             video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][0]
         else:
-            max_idx = len(self.video_names[idx][:])
+            max_idx = len(self.video_names[idx][:])-1
+
             video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][min(10, max_idx)]
 
         temp_file = os.path.splitext(video_file)[0] + '.json'
@@ -420,16 +410,13 @@ def merge_synced_videos(params):
 def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
     ts = time.time()
 
-    if params.calibration_video_mode == 0:
-        video_names = params.video_names
-    else:
-        video_names = []
-        for i in range(params.number_of_cameras):
-            temp = []
-            for name in params.video_names[i][:]:
-                if params.base_code[i] in name:
-                    temp.append(name)
-            video_names.append(temp)
+    video_names = []
+    for i in range(params.number_of_cameras):
+        temp = []
+        for name in params.video_names[i][:]:
+            if params.base_code[i] in name:
+                temp.append(name)
+        video_names.append(temp)
 
     if method == 'maximum':
         itr_max = int(np.min(params.number_of_videos) - 1)

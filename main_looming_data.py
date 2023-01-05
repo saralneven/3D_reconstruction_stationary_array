@@ -3,17 +3,19 @@ from lib import SyncVideoSet
 from lib import ImageProcessingFunctions as ip
 
 # Path to deployment folder
-input_path = '/Volumes/2022_copy/predator/19_07_22/2'
+path_in = '/Volumes/2022_copy/bommie/13_07_22/1'
 
 # Create a synchronization object containing the deployment's properties
-deployment = SyncVideoSet(input_path, recut_videos=True, calibration_video_mode=0)
+deployment = SyncVideoSet(path_in, recut_videos=False, calibration_video_mode=1)
 
 # Determine time lag between videos
-deployment.get_time_lag()
+deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=4)
 
-# Get calibration videos
+deployment.save()
+
+'''# Get calibration videos
 deployment.get_calibration_videos()
 
 # Cut and merge single videos
 deployment.cut_and_merge_videos(merge=True)
-
+'''
