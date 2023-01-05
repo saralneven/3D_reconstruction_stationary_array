@@ -153,8 +153,7 @@ class SyncVideoSet:
                 get_trimmed_videos(self, True)
             clean_video_names(self)
         else:
-            print('mode 1')
-
+            cut_calibration_videos(self)
 
     def detect_calibration_videos(self):
         if any(v is None for v in self.calibration_video_names):
@@ -187,7 +186,7 @@ class SyncVideoSet:
         self.calibration_video_names = temp.calibration_video_names
         self.lag_out = temp.lag_out
         self.lag_matrix = temp.lag_matrix
-        self.lag_out_cal = temp.calibration_video_names
+        self.lag_out_cal = temp.lag_out_cal
         self.lag_matrix_calibration = temp.lag_matrix_calibration
         return self
 
@@ -408,7 +407,7 @@ def merge_synced_videos(params):
                         '/merge_list.txt')
 
 
-def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
+def get_time_lag_matrix(params, method, number_of_video_chapters_to_evaluate):
     ts = time.time()
 
     video_names = []
@@ -422,7 +421,7 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
     if method == 'maximum':
         itr_max = int(np.min(params.number_of_videos) - 1)
     elif method == 'custom':
-        itr_max = min(number_of_videos_to_evaluate, np.min(params.number_of_videos) - 1)
+        itr_max = min(number_of_video_chapters_to_evaluate, np.min(params.number_of_videos) - 1)
     elif method == 'calibration_video':
         itr_max = 1
         video_names = np.array([[params.calibration_video_names[0]], [params.calibration_video_names[1]]])
@@ -618,3 +617,17 @@ def detect_calibration_videos(deployment):
                 interval_calib_video = [max(0, min(t_detect) - delta_t), max(t_detect) + delta_t]
                 deployment.calibration_video_names[i] = potential_calib_videos[j]
                 deployment.calib_interval.append(interval_calib_video)
+
+
+def cut_calibration_videos(params):
+    c = 0
+    for name in params.calibration_video_names:
+        temp = name.split('.')
+        path_input = os.path.join(params.path_in, params.camera_names[c], name)
+        path_output = os.path.join(params.path_in, params.camera_names[c], temp[0] + '_cal.' + temp[1])
+        s_start = params.lag_out_cal[c] + params.calib_interval[c][0]
+        s_end = params.lag_out_cal[c] + params.calib_interval[c][1]
+
+        ip.cut_video(path_input, path_output, s_start, s_end)
+
+        c += 1

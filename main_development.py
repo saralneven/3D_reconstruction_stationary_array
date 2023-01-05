@@ -11,7 +11,7 @@ deployment = SyncVideoSet(path_in, recut_videos=True, calibration_video_mode=1)
 
 deployment.detect_calibration_videos()
 
-deployment.get_time_lag(method='custom', number_of_videos_to_evaluate=2)
+deployment.get_time_lag(method='custom', number_of_video_chapters_to_evaluate=2)
 
 deployment.get_calibration_videos()
 
