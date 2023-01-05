@@ -333,8 +333,6 @@ def get_lag_vector_from_matrix(params, lag_matrix, single_video_mode):
     if not single_video_mode:
         for i in range(1, params.number_of_cameras):
             if i % 2 == 1:
-                print(lag_matrix_frames[:, i])
-                print(np.squeeze(lag_matrix_frames[rows, i]))
                 values, counts = np.unique(
                     np.concatenate([(lag_matrix_frames[:, i]), np.squeeze(lag_matrix_frames[rows, i])]),
                     return_counts=True)
@@ -428,7 +426,6 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
     elif method == 'calibration_video':
         itr_max = 1
         video_names = np.array([[params.calibration_video_names[0]], [params.calibration_video_names[1]]])
-        print(video_names)
     else:
         print('ERROR: no correct method is assigned. Use either ''maximum'' or ''custom''')
         sys.exit()
