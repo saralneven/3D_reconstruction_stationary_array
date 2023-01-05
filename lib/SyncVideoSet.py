@@ -118,7 +118,6 @@ class SyncVideoSet:
             print('Video set is already analysed and this data is loaded from', self.filename)
         else:
             self.lag_matrix = get_time_lag_matrix(self, method, number_of_videos_to_evaluate)
-            print(self.lag_matrix)
             with open(output_file_lag_matrix, 'wb'):
                 np.save(output_file_lag_matrix, self.lag_matrix)
 
@@ -126,7 +125,6 @@ class SyncVideoSet:
         if self.calibration_video_mode == 1 and np.sum(self.lag_matrix_calibration) == 0:
             self.lag_matrix_calibration = get_time_lag_matrix(self, method='calibration_video',
                                                               number_of_videos_to_evaluate=1)
-            print(self.lag_matrix_calibration)
             lag_out_single, lag_out_cal_single = get_lag_vector_from_matrix(self, self.lag_matrix_calibration, True)
             self.lag_out_cal = lag_out_cal_single / self.fps
 
