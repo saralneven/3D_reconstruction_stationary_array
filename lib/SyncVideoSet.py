@@ -93,6 +93,7 @@ class SyncVideoSet:
         # Additional empty arrays
         self.lag_out_cal = []
         self.lag_out = []
+        self.lag_matrix_calibration = []
 
         # Coded information
         self.codec_preset = 'ultrafast'
@@ -106,29 +107,37 @@ class SyncVideoSet:
         if os.path.exists(self.filename) and load_data:
             self.load()
 
-    def get_time_lag(self, method='maximum', number_of_videos_to_evaluate=4):
+    def get_time_lag(self, method='maximum', number_of_videos_to_evaluate=4, force_recalculating=False):
         print('---------- FIND TIME LAG BETWEEN VIDEOS ----------')
 
         folder_names = self.path_in.split('/')
         output_file_lag_matrix = 'results/lag_matrices/' + folder_names[-3] + '_' + folder_names[-2] + '_' + \
                                  folder_names[-1] + '.npy'
 
-        if os.path.exists(output_file_lag_matrix) and not self.recut_videos:
-            self.lag_matrix = np.load(output_file_lag_matrix)
-            print('Video set is already analysed and this data is loaded from', output_file_lag_matrix)
+        if any(self.lag_out) and not force_recalculating:
+            print('Video set is already analysed and this data is loaded from', self.filename)
         else:
-            get_time_lag_matrix(self, method, number_of_videos_to_evaluate)
-
+            self.lag_matrix = get_time_lag_matrix(self, method, number_of_videos_to_evaluate)
+            print(self.lag_matrix)
             with open(output_file_lag_matrix, 'wb'):
                 np.save(output_file_lag_matrix, self.lag_matrix)
 
-        # Determine final lag values
-        lag_out, lag_out_cal = get_lag_vector_from_matrix(self)
-        lag_out = lag_out / self.fps
-        lag_out_cal = lag_out_cal / self.fps
+        # Get time lag between calibration videos
+        if self.calibration_video_mode == 1 and np.sum(self.lag_matrix_calibration) == 0:
+            self.lag_matrix_calibration = get_time_lag_matrix(self, method='calibration_video',
+                                                              number_of_videos_to_evaluate=1)
+            print(self.lag_matrix_calibration)
+            lag_out_single, lag_out_cal_single = get_lag_vector_from_matrix(self, self.lag_matrix_calibration, True)
+            self.lag_out_cal = lag_out_cal_single / self.fps
 
-        self.lag_out_cal = lag_out_cal
-        self.lag_out = lag_out
+        # Determine final lag values
+        lag_out_all, lag_out_cal_all = get_lag_vector_from_matrix(self, self.lag_matrix, self.single_video_mode)
+        lag_out_all = lag_out_all / self.fps
+
+        if self.calibration_video_mode == 0:
+            self.lag_out_cal = lag_out_cal_all / self.fps
+
+        self.lag_out = lag_out_all
 
     def cut_and_merge_videos(self, merge=False):
         print('---------- CUT AND MERGE VIDEO CHAPTERS ----------')
@@ -174,6 +183,9 @@ class SyncVideoSet:
             temp = pickle.load(input)
         self.calib_interval = temp.calib_interval
         self.calibration_video_names = temp.calibration_video_names
+        self.lag_out = temp.lag_out
+        self.lag_matrix = temp.lag_matrix
+        self.lag_out_cal = temp.calibration_video_names
         return self
 
     def save(self):
@@ -246,7 +258,11 @@ def remove_additional_videos(params, remove_cut_files):
 
 def load_meta_data(self):
     for idx in range(self.number_of_cameras):
-        video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][0]
+        if self.calibration_video_mode == 0:
+            video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][0]
+        else:
+            max_idx = len(self.video_names[idx][:])
+            video_file = self.path_in + str('/') + self.camera_names[idx] + str('/') + self.video_names[idx][min(10, max_idx)]
 
         temp_file = os.path.splitext(video_file)[0] + '.json'
 
@@ -287,10 +303,7 @@ def verify_input_data(self):
         self.flag_folder_input = False
 
 
-def extract_audio(self, itr_camera, itr_video):
-    video_file = self.path_in + str('/') + self.camera_names[itr_camera] + str('/') + \
-                 self.video_names[itr_camera][itr_video]
-
+def extract_audio(self, video_file):
     print('Audio extracted from', video_file)
 
     temp_file = os.path.splitext(video_file)[0] + '.wav'
@@ -316,22 +329,21 @@ def get_shifted_matrix(mat):
     return out
 
 
-def get_lag_vector_from_matrix(params):
-    lag_matrix_frames = np.round(params.lag_matrix * params.fps)
+def get_lag_vector_from_matrix(params, lag_matrix, single_video_mode):
+    lag_matrix_frames = np.round(lag_matrix * params.fps)
 
     rows = np.where(np.arange(len(lag_matrix_frames[:, 0])) % params.number_of_cameras == 1)
     rows = np.tile(rows, 1).transpose()
 
     lag_out = np.zeros(params.number_of_cameras)
 
-    if not params.single_video_mode:
+    if not single_video_mode:
         for i in range(1, params.number_of_cameras):
-            print(i)
             if i % 2 == 1:
-                print(lag_matrix_frames)
-                print(rows)
+                print(lag_matrix_frames[:, i])
+                print(np.squeeze(lag_matrix_frames[rows, i]))
                 values, counts = np.unique(
-                    np.concatenate([lag_matrix_frames[:, i], np.squeeze(lag_matrix_frames[rows, i])]),
+                    np.concatenate([(lag_matrix_frames[:, i]), np.squeeze(lag_matrix_frames[rows, i])]),
                     return_counts=True)
             else:
                 values, counts = np.unique(lag_matrix_frames[:, i], return_counts=True)
@@ -408,10 +420,25 @@ def merge_synced_videos(params):
 def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
     ts = time.time()
 
+    if params.calibration_video_mode == 0:
+        video_names = params.video_names
+    else:
+        video_names = []
+        for i in range(params.number_of_cameras):
+            temp = []
+            for name in params.video_names[i][:]:
+                if params.base_code[i] in name:
+                    temp.append(name)
+            video_names.append(temp)
+
     if method == 'maximum':
         itr_max = int(np.min(params.number_of_videos) - 1)
     elif method == 'custom':
         itr_max = min(number_of_videos_to_evaluate, np.min(params.number_of_videos) - 1)
+    elif method == 'calibration_video':
+        itr_max = 1
+        video_names = np.array([[params.calibration_video_names[0]], [params.calibration_video_names[1]]])
+        print(video_names)
     else:
         print('ERROR: no correct method is assigned. Use either ''maximum'' or ''custom''')
         sys.exit()
@@ -425,8 +452,14 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
         print(np.round(time.time() - ts, 2), 's >> Analysing audio of video ', itr_video * params.number_of_cameras + 0
               + 1, '/', itr_max * params.number_of_cameras)
 
-        res_audio = extract_audio(params, 0, itr_video)
+        # Pick video file name
+        itr_camera = 0
+        video_file = params.path_in + str('/') + params.camera_names[itr_camera] + str('/') + \
+                     video_names[itr_camera][itr_video]
+
+        res_audio = extract_audio(params, video_file)
         y = np.zeros((len(res_audio), params.number_of_cameras))
+        max_length = len(res_audio)
         y[:len(res_audio), 0] = res_audio
 
         if params.number_of_cameras > 2:
@@ -434,15 +467,21 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
                 print(np.round(time.time() - ts, 2), 's >> Analysing audio of video ',
                       itr_video * params.number_of_cameras + i + 1, '/', itr_max * params.number_of_cameras)
 
-                res_audio = extract_audio(params, i, itr_video)
+                itr_camera = i
+                video_file = params.path_in + str('/') + params.camera_names[itr_camera] + str('/') + \
+                             video_names[itr_camera][itr_video]
+
+                res_audio = extract_audio(params, video_file)
                 y[:len(res_audio), i] = res_audio
         else:
-            i = 1
             print(np.round(time.time() - ts, 2), 's >> Analysing audio of video ',
                   itr_video * params.number_of_cameras + i + 1, '/', itr_max * params.number_of_cameras)
 
-            res_audio = extract_audio(params, i, itr_video)
-            y[:len(res_audio), i] = res_audio
+            video_file = params.path_in + str('/') + params.camera_names[1] + str('/') + \
+                         video_names[1][itr_video]
+
+            res_audio = extract_audio(params, video_file)
+            y[:min(len(res_audio), max_length), i] = res_audio[:min(len(res_audio), max_length)]
 
         lag = np.zeros((params.number_of_cameras, params.number_of_cameras))
 
@@ -455,7 +494,7 @@ def get_time_lag_matrix(params, method, number_of_videos_to_evaluate):
         out[itr_video * params.number_of_cameras:(itr_video + 1) * params.number_of_cameras, :] = get_shifted_matrix(
             lag)
 
-        params.lag_matrix = out
+    return out
 
 
 def clean_video_names(params):
